@@ -1,0 +1,31 @@
+workflows:
+  android-build:
+    name: Android Build
+    instance_type: linux
+    environment:
+      java: 17
+      vars:
+        ANDROID_HOME: /usr/local/share/android-sdk
+        ANDROID_SDK_ROOT: /usr/local/share/android-sdk
+        GRADLE_VERSION: "8.2"
+    scripts:
+      - name: Set up local.properties
+        script: echo "sdk.dir=$ANDROID_HOME" > local.properties
+      - name: Accept licenses and install SDK components
+        script: |
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" "build-tools;34.0.0" "platform-tools"
+      - name: Install Gradle
+        script: |
+          GRADLE_ZIP=gradle-$GRADLE_VERSION-bin.zip
+          wget -q https://services.gradle.org/distributions/$GRADLE_ZIP || curl -sLO https://services.gradle.org/distributions/$GRADLE_ZIP
+          mkdir -p $HOME/gradle-dist
+          python3 -c "import zipfile,sys; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])" $GRADLE_ZIP $HOME/gradle-dist
+          chmod +x $HOME/gradle-dist/gradle-$GRADLE_VERSION/bin/gradle
+          $HOME/gradle-dist/gradle-$GRADLE_VERSION/bin/gradle --version
+      - name: Build
+        script: |
+          $HOME/gradle-dist/gradle-$GRADLE_VERSION/bin/gradle assembleDebug
+    artifacts:
+      - app/build/outputs/**/*.apk
+      - app/build/outputs/**/*.aab
